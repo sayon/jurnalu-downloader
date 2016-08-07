@@ -24,12 +24,11 @@ namespace jurnalu_downloader
             if (!started)
             {
                 started = true;
-
                 using (WebClient wc = new WebClient())
                 {
                     wc.DownloadDataCompleted += (o, ee) =>
                     {
-                        var parseResult = Logic.ParsePage(textBoxInput.Text, Encoding.UTF8.GetString(ee.Result));
+                        var parseResult = IssueDownloader.ParsePage(Encoding.UTF8.GetString(ee.Result));
                         if (parseResult != null)
                         {
                             var df = new DownloadForm(parseResult);
@@ -38,26 +37,16 @@ namespace jurnalu_downloader
                         }
                         else {
                             textBoxInput.Enabled = true;
-                            _error("Can't parse this page. Make sure you have opened the first comic page!");
+                            _error("Can't parse this page. Make sure you have opened a comic page!");
                         }
-
                     };
-
                     try
                     {
                         wc.DownloadDataAsync(new System.Uri(textBoxInput.Text));
                         textBoxInput.Enabled = false;
                     }
-                    catch (UriFormatException)
-                    {
-                        _error("Check URL format");
-                    }
-                    catch (WebException)
-                    {
-                        _error("Can't download, check network connection");
-                    }
-                    
-
+                    catch (UriFormatException) { _error("Check URL format"); }
+                    catch (WebException) { _error("Can't download, check network connection"); }
                 }
             }
         }
@@ -70,20 +59,12 @@ namespace jurnalu_downloader
         private void MainForm_Load(object sender, EventArgs e)
         {
             ActiveControl = textBoxInput;
-            Refocus();
+            textBoxInput.Focus();
         }
 
         private void textBoxInput_PreviewKeyDown(object sender, PreviewKeyDownEventArgs e)
         {
-            if (e.KeyCode == Keys.Enter)
-            {
-                buttonDownload.PerformClick();
-            }
-        }
-
-        private void MainForm_FormClosed(object sender, FormClosedEventArgs e)
-        {
-
+            if (e.KeyCode == Keys.Enter) { buttonDownload.PerformClick(); }
         }
 
         internal void Reset()
@@ -92,16 +73,12 @@ namespace jurnalu_downloader
             buttonDownload.Enabled = true;
             textBoxInput.Enabled = true;
             textBoxInput.ResetText();
-            
-        }
-        internal void Refocus()
-        {
             textBoxInput.Focus();
         }
 
         private void MainForm_Activated(object sender, EventArgs e)
         {
-            Refocus();
+            textBoxInput.Focus();
         }
     }
 }

@@ -8,51 +8,36 @@ using System.Text;
 using System.Windows.Forms;
 using System.IO;
 using System.Diagnostics;
+using Utilities;
 
 namespace jurnalu_downloader
 {
     public partial class DownloadForm : Form
     {
-        public DownloadForm()
-        {
-            InitializeComponent();
-        }
+        public DownloadForm() { InitializeComponent(); }
 
-        int current;
-        bool _hasMore = false;
+        private bool _hasMore = false;
 
-        private readonly Logic.RequestInfo _request;
+        private readonly ComicIssue _issue;
         private readonly string _directoryPath;
         private DirectoryInfo _directory;
-        public DownloadForm(Logic.RequestInfo request)
+        public DownloadForm(ComicIssue request)
         {
+            _issue = request;
+            _directoryPath = sanitize(_issue.Book) + "/" + sanitize(_issue.Issue);
+            
             InitializeComponent();
             progressBarCurrent.Minimum = 0;
             progressBarCurrent.Value = 1;
             progressBarTotal.Minimum = 0;
-            progressBarTotal.Maximum = request.LastIndex;
+            progressBarTotal.Maximum = _issue.Urls.Count;
             progressBarTotal.Value = 0;
             progressBarCurrent.Maximum = 100;
-            _request = request;
-            current = request.FirstIndex;
-            _directoryPath = _request.Book + "/" + _request.Issue;
+
             labelDownloadingIntoContent.Text = _directoryPath;
         }
 
-        private void label1_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void download(WebClient wc, int i)
-        {
-            var fname = i + "." + _request.Extension;
-            var url = _request.BaseUrl + "/" + fname;
-
-            wc.DownloadFileAsync(new Uri(url), _directoryPath + "/" + fname);
-
-        }
-
+       
         private static void notify(string msg, string header = "")
         {
             var item = new NotifyIcon();
@@ -61,34 +46,40 @@ namespace jurnalu_downloader
             item.ShowBalloonTip(100, header, msg, ToolTipIcon.Info);
         }
 
+        string sanitize(string name)
+        {
+            var invalids = System.IO.Path.GetInvalidFileNameChars();
+            return String.Join("", name.Split(invalids, StringSplitOptions.RemoveEmptyEntries));
+        }
         private void DownloadForm_Load(object sender, EventArgs e)
         {
             _directory = Directory.CreateDirectory(_directoryPath);
-            WebClient wc = new WebClient();
 
-            var theform = this;
-            wc.DownloadProgressChanged += (o, ee) => progressBarCurrent.Value = ee.ProgressPercentage;
-
-            wc.DownloadFileCompleted += (o, ee) =>
+            var downloader = new AsyncFileDownloader( _issue.Urls, 
+                (i,s) => Path.GetFileName(s) );
+            
+            var current = 1;
+            _updatePage(current);
+            downloader.onDownloadProgressChanged += (o, ee) => progressBarCurrent.Value = ee.ProgressPercentage;
+            downloader.onDownloadDataCompleted += (o, ee) =>
             {
-                if (current < _request.LastIndex)
+                _updatePage(current);
+                progressBarTotal.Value = current++;
+                if (current > _issue.Urls.Count)
                 {
-                    labelPage.Text = "Page " + ++current + "/" + _request.LastIndex;
-                    progressBarTotal.Value = current;
-                    download(wc, current);
-                }
-                else
-                {
-                    notify("Download completed: " + _request.Book + ", " + _request.Issue);
+                    notify("Download completed: " + _issue.Book + ", " + _issue.Issue);
                     buttonMore.Show();
                     buttonMore.Focus();
                 }
-
             };
 
-            download(wc, _request.FirstIndex);
 
+            downloader.DownloadAll(_directory.FullName);
+        }
 
+        private void _updatePage(int current)
+        {
+            labelPage.Text = "Page " + current + "/" + _issue.Urls.Count;
         }
 
         private void buttonShowInExplorer_Click(object sender, EventArgs e)
@@ -104,9 +95,9 @@ namespace jurnalu_downloader
         private void buttonMore_Click(object sender, EventArgs e)
         {
             _hasMore = true;
-            MainForm.Instance.Reset();
             MainForm.Instance.Show();
-            MainForm.Instance.Refocus();
+            MainForm.Instance.Reset();
+            
             Close();
         }
     }

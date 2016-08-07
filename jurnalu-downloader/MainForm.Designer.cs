@@ -39,9 +39,9 @@
             this.labelInputUrl.AutoSize = true;
             this.labelInputUrl.Location = new System.Drawing.Point(13, 13);
             this.labelInputUrl.Name = "labelInputUrl";
-            this.labelInputUrl.Size = new System.Drawing.Size(108, 13);
+            this.labelInputUrl.Size = new System.Drawing.Size(122, 13);
             this.labelInputUrl.TabIndex = 0;
-            this.labelInputUrl.Text = "URL of the first page:";
+            this.labelInputUrl.Text = "URL of any comic page:";
             // 
             // linkLabelAbout
             // 
@@ -84,7 +84,6 @@
             this.ShowIcon = false;
             this.Text = "Jurnalu.ru downloader";
             this.Activated += new System.EventHandler(this.MainForm_Activated);
-            this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.MainForm_FormClosed);
             this.Load += new System.EventHandler(this.MainForm_Load);
             this.ResumeLayout(false);
             this.PerformLayout();

@@ -43,14 +43,14 @@
             this.labelDownloadingInto.AutoSize = true;
             this.labelDownloadingInto.Location = new System.Drawing.Point(13, 13);
             this.labelDownloadingInto.Name = "labelDownloadingInto";
-            this.labelDownloadingInto.Size = new System.Drawing.Size(89, 13);
+            this.labelDownloadingInto.Size = new System.Drawing.Size(69, 13);
             this.labelDownloadingInto.TabIndex = 0;
-            this.labelDownloadingInto.Text = "Downloading into";
+            this.labelDownloadingInto.Text = "Downloading";
             // 
             // labelDownloadingIntoContent
             // 
             this.labelDownloadingIntoContent.AutoSize = true;
-            this.labelDownloadingIntoContent.Location = new System.Drawing.Point(112, 13);
+            this.labelDownloadingIntoContent.Location = new System.Drawing.Point(86, 13);
             this.labelDownloadingIntoContent.Name = "labelDownloadingIntoContent";
             this.labelDownloadingIntoContent.Size = new System.Drawing.Size(25, 13);
             this.labelDownloadingIntoContent.TabIndex = 1;
@@ -64,7 +64,6 @@
             this.labelPage.Size = new System.Drawing.Size(52, 13);
             this.labelPage.TabIndex = 2;
             this.labelPage.Text = "Page 0/0";
-            this.labelPage.Click += new System.EventHandler(this.label1_Click);
             // 
             // buttonShowInExplorer
             // 
