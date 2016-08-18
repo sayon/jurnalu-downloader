@@ -22,69 +22,63 @@ namespace jurnalu_downloader
         }
     }
 
-    public class IssueDownloader
+    public class IssueDownloader : IDisposable
     {
+        public delegate void IssueDownloaded(ComicIssue issue);
+        public delegate void ErrorHandler(string error);
+        public IssueDownloader(string address, IssueDownloaded forIssueDo, ErrorHandler error)
+        {
+            _webClient = new WebClient();
+            _webClient.DownloadDataCompleted += (o, e) => {
+                var issue = ParsePage(Encoding.UTF8.GetString(e.Result));
+                if (issue == null) error("Can't parse this page. Make sure you have opened a comic page!");
+                else forIssueDo(issue);
+            };
+            try
+            {
+                _webClient.DownloadDataAsync(new Uri(address));
+            }
+            catch (UriFormatException) { error("Check URL format"); }
+            catch (WebException) { error("Can't download, check network connection"); }
+
+
+        }
+        private const string _regexImageUrl = @" *<a href=""(.*)\/(.+)\.(.+)"" rel=""shadowbox""><b>Увеличить</b></a>";
+        private const string _regexIndices = @"select class=""C"" .*>-(\d+)-</option>.*</select>";
+        private const string _regexBookIssue = @"<meta NAME=""description"" content=""Читайте онлайн комикс '(.*)' номер '(.*)' на сайте Jurnalu.ru"">";
+
+        private WebClient _webClient;
+
         public static ComicIssue ParsePage(string contents)
         {
-            var matches = Regex.Matches(contents, @" *<a href=""(.*)\/(.+)\.(.+)"" rel=""shadowbox""><b>Увеличить</b></a>");
-            if (matches.Count == 0) return null;
-            var baseurl = matches[0].Groups[1].Value;
-            var ext = matches[0].Groups[3].Value;
+            var imageMatch = Regex.Matches(contents, _regexImageUrl);
+            if (imageMatch.Count == 0) return null;
+            var baseurl = imageMatch[0].Groups[1].Value;
+            var ext = imageMatch[0].Groups[3].Value;
 
-            var matches2 = Regex.Matches(contents, @"select class=""C"" .*>-(\d+)-</option>.*</select>", RegexOptions.Singleline);
-            if (matches2.Count == 0) return null;
-            var lastIdx = Int32.Parse(matches2[0].Groups[1].Value);
+            var imageIndicesMatch = Regex.Matches(contents, _regexIndices, RegexOptions.Singleline);
+            if (imageIndicesMatch.Count == 0) return null;
+            var lastIdx = Int32.Parse(imageIndicesMatch[0].Groups[1].Value);
 
-            var matches3 = Regex.Matches(contents, @"<meta NAME=""description"" content=""Читайте онлайн комикс '(.*)' номер '(.*)' на сайте Jurnalu.ru"">");
+            var matches3 = Regex.Matches(contents, _regexBookIssue);
             if (matches3.Count == 0) return null;
             var book = matches3[0].Groups[1].Value;
             var issue = matches3[0].Groups[2].Value;
-            LinkedList<String> filenames = new LinkedList<string>();
+
+            var filenames = new LinkedList<string>();
             for (int i = 1; i <= lastIdx; i++)
-                filenames.AddLast(baseurl + "/" + i + "." + ext);
+                filenames.AddLast(String.Format("{0}/{1}.{2}", baseurl, i, ext));
 
             return new ComicIssue(filenames, book, issue);
         }
 
-        public ComicIssue Issue = null;
-        public void Initialize(Uri uri)
+        public void Dispose()
         {
-            using (WebClient wc = new WebClient())
-            {
-                wc.DownloadDataCompleted += (o, e) => Issue = IssueDownloader.ParsePage(Encoding.UTF8.GetString(e.Result));
-                wc.DownloadDataAsync(uri);
-            }
+            _webClient.Dispose();
         }
 
-
-        public void PerformDownload(DownloadProgressChangedEventHandler onDownloadProgressChanged,
-            AsyncCompletedEventHandler onDownloadDataCompleted)
-        {
-            int i = 1;
-            if (Issue == null) 
-            using (WebClient wc = new WebClient())
-            {
-                var enumerator = Issue.Urls.GetEnumerator();
-                var directoryPath = Issue.Book + "/" + Issue.Issue;
-
-                wc.DownloadFileCompleted += (o, e) =>
-                {
-                    if (enumerator.MoveNext())
-                        wc.DownloadFileAsync(new Uri(enumerator.Current), directoryPath + "/" + (i++) + Path.GetExtension(enumerator.Current));
-                };
-
-                if (onDownloadProgressChanged != null)
-                    wc.DownloadProgressChanged += onDownloadProgressChanged;
-
-                if (onDownloadDataCompleted != null)
-                    wc.DownloadFileCompleted += onDownloadDataCompleted;
-
-                if (enumerator.MoveNext())
-                    wc.DownloadFileAsync(new Uri(enumerator.Current), directoryPath + "/" + (i++) + Path.GetExtension(enumerator.Current));
-            };
-        }
     }
 
-    
+
 
 }

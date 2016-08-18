@@ -98,6 +98,7 @@
             this.linkLabelAbout.TabIndex = 6;
             this.linkLabelAbout.TabStop = true;
             this.linkLabelAbout.Text = "See project page on GitHub";
+            this.linkLabelAbout.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.linkLabelAbout_LinkClicked);
             // 
             // buttonMore
             // 
@@ -125,7 +126,6 @@
             this.Name = "DownloadForm";
             this.ShowIcon = false;
             this.Text = "Jurnalu.ru downloader";
-            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.DownloadForm_FormClosing);
             this.Load += new System.EventHandler(this.DownloadForm_Load);
             this.ResumeLayout(false);
             this.PerformLayout();

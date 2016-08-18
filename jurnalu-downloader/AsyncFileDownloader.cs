@@ -7,66 +7,85 @@ using System.Text;
 
 namespace Utilities
 {
-    class AsyncFileDownloader
+    sealed class AsyncFileDownloader : IDisposable
     {
-        private bool _working = true;
-        private void _end() { Done = true; _working = false; }
-        protected FileNameGenerator FileNameForUrl;
-        protected readonly LinkedList<string> _urls = new LinkedList<string>();
-        public AsyncFileDownloader(IEnumerable<string> urls, FileNameGenerator fileNameForUrl )
+        private enum State
         {
-            if (urls == null) throw new ArgumentNullException();
-            foreach (var i in urls) _urls.AddLast(i);
-            Done = false;
-            FileNameForUrl = fileNameForUrl;
+            NOT_STARTED,
+            DONE,
+            WORKING
         }
 
-        public DownloadProgressChangedEventHandler onDownloadProgressChanged { get; set; }
-        public AsyncCompletedEventHandler onDownloadDataCompleted { get; set; }
+        private State _state = State.NOT_STARTED;
+
+        private readonly FileNameGenerator FileNameForUrl;
+        private readonly LinkedList<string> _urls = new LinkedList<string>();
+        private readonly string _directoryPath;
+
+        private LinkedList<string>.Enumerator _enumerator;
+        private int _currentUrlIndex = 0;
+        private WebClient _webClient = new WebClient();
+
+
+        public AsyncFileDownloader(IEnumerable<string> urls, FileNameGenerator fileNameForUrl, string directoryPath )
+        {
+            if (fileNameForUrl == null)
+                throw new InvalidOperationException("FileNameForUrl can not be null");
+            
+            if (directoryPath == null)
+                throw new InvalidOperationException("directoryPath can not be null");
+            
+            _directoryPath = directoryPath;
+            FileNameForUrl = fileNameForUrl; 
+            
+            if (urls == null) throw new ArgumentNullException();
+            foreach (var i in urls) _urls.AddLast(i); 
+            _enumerator = _urls.GetEnumerator();
+            
+            _webClient.DownloadFileCompleted += (o, e) => DownloadNext();
+        }
+
+        public DownloadProgressChangedEventHandler DownloadProgressChanged { 
+            set {
+            _webClient.DownloadProgressChanged += value;
+            }
+        }
+        public AsyncCompletedEventHandler OnDownloadDataCompleted {
+            set {   
+                _webClient.DownloadFileCompleted += value;
+            } 
+        }
         
         public delegate string FileNameGenerator(int index, string url);
-        
-        public void DownloadAll(string directoryPath)
-        {
-            int i = 0;
-            var enumerator = _urls.GetEnumerator();
 
-            using (WebClient wc = new WebClient())
-            {   
-                wc.DownloadFileCompleted += (o, e) =>
-                {
-                    if (FileNameForUrl == null)
-                        throw new InvalidOperationException("FileNameForUrl field should be initialized");
-                    if (enumerator.MoveNext())
+      
+
+        private void DownloadNext() {
+             if (_enumerator.MoveNext())
                     {
-                        var fname = directoryPath + "/" + FileNameForUrl(i++, enumerator.Current);
-                        wc.DownloadFileAsync(new Uri(enumerator.Current), fname);
+                        var fname = _directoryPath + "/" + FileNameForUrl(_currentUrlIndex++, _enumerator.Current);
+                        _webClient.DownloadFileAsync(new Uri(_enumerator.Current), fname);
                     }
-                    else _end();
-                };
-
-                if (onDownloadProgressChanged != null)
-                    wc.DownloadProgressChanged += onDownloadProgressChanged;
-
-                if (onDownloadDataCompleted != null)
-                    wc.DownloadFileCompleted += onDownloadDataCompleted;
-
-                if (enumerator.MoveNext())
-                {
-                    var fname = directoryPath + "/" + FileNameForUrl(i++, enumerator.Current);
-                    wc.DownloadFileAsync(new Uri(enumerator.Current), fname);
-                }
-                else _end();
-            };
+             else _state = State.DONE;
+        }
+        public void DownloadAll()
+        {
+            _state = State.WORKING;
+            DownloadNext();         
         }
 
-        public bool Done { get; private set; }
+        public bool Done { get { return _state == State.DONE; } }
         /**
          * Uses spinlock
          */
         public void WaitForFinish()
         {
-            while (_working && !Done);
+            while (_state != State.DONE);
+        }
+
+        public void Dispose()
+        {
+            _webClient.Dispose();
         }
     }
 }

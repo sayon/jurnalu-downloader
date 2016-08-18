@@ -18,42 +18,17 @@ namespace jurnalu_downloader
             InitializeComponent();
         }
 
-        volatile bool started = false;
         private void buttonDownload_Click(object sender, EventArgs e)
         {
-            if (!started)
-            {
-                started = true;
-                using (WebClient wc = new WebClient())
-                {
-                    wc.DownloadDataCompleted += (o, ee) =>
-                    {
-                        var parseResult = IssueDownloader.ParsePage(Encoding.UTF8.GetString(ee.Result));
-                        if (parseResult != null)
-                        {
-                            var df = new DownloadForm(parseResult);
-                            df.Show();
-                            Hide();
-                        }
-                        else {
-                            textBoxInput.Enabled = true;
-                            _error("Can't parse this page. Make sure you have opened a comic page!");
-                        }
-                    };
-                    try
-                    {
-                        wc.DownloadDataAsync(new System.Uri(textBoxInput.Text));
-                        textBoxInput.Enabled = false;
-                    }
-                    catch (UriFormatException) { _error("Check URL format"); }
-                    catch (WebException) { _error("Can't download, check network connection"); }
-                }
-            }
+            using (var downloader = new IssueDownloader(textBoxInput.Text, 
+                issue => { new DownloadForm(issue).ShowDialog();}, Error))
+            {}
+
         }
-        private void _error(string message)
+
+        private void Error(string message)
         {
             MessageBox.Show(message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            started = false;
         }
 
         private void MainForm_Load(object sender, EventArgs e)
@@ -67,18 +42,16 @@ namespace jurnalu_downloader
             if (e.KeyCode == Keys.Enter) { buttonDownload.PerformClick(); }
         }
 
-        internal void Reset()
-        {
-            started = false;
-            buttonDownload.Enabled = true;
-            textBoxInput.Enabled = true;
-            textBoxInput.ResetText();
-            textBoxInput.Focus();
-        }
+        
 
         private void MainForm_Activated(object sender, EventArgs e)
         {
             textBoxInput.Focus();
+        }
+
+        private void linkLabelAbout_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+        {
+            System.Diagnostics.Process.Start("http://github.com/sayon/jurnalu-downloader");
         }
     }
 }

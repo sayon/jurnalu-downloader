@@ -21,10 +21,10 @@ namespace jurnalu_downloader
         private readonly ComicIssue _issue;
         private readonly string _directoryPath;
         private DirectoryInfo _directory;
-        public DownloadForm(ComicIssue request)
+        public DownloadForm(ComicIssue issue)
         {
-            _issue = request;
-            _directoryPath = sanitize(_issue.Book) + "/" + sanitize(_issue.Issue);
+            _issue = issue;
+            _directoryPath = Sanitize(_issue.Book) + "/" + Sanitize(_issue.Issue);
             
             InitializeComponent();
             progressBarCurrent.Minimum = 0;
@@ -38,7 +38,7 @@ namespace jurnalu_downloader
         }
 
        
-        private static void notify(string msg, string header = "")
+        private static void Notify(string msg, string header = "")
         {
             var item = new NotifyIcon();
             item.Visible = true;
@@ -46,35 +46,37 @@ namespace jurnalu_downloader
             item.ShowBalloonTip(100, header, msg, ToolTipIcon.Info);
         }
 
-        string sanitize(string name)
+        private string Sanitize(string name)
         {
             var invalids = System.IO.Path.GetInvalidFileNameChars();
             return String.Join("", name.Split(invalids, StringSplitOptions.RemoveEmptyEntries));
         }
+
         private void DownloadForm_Load(object sender, EventArgs e)
         {
             _directory = Directory.CreateDirectory(_directoryPath);
 
-            var downloader = new AsyncFileDownloader( _issue.Urls, 
-                (i,s) => Path.GetFileName(s) );
-            
             var current = 1;
             _updatePage(current);
-            downloader.onDownloadProgressChanged += (o, ee) => progressBarCurrent.Value = ee.ProgressPercentage;
-            downloader.onDownloadDataCompleted += (o, ee) =>
+
+            using (var downloader = new AsyncFileDownloader(_issue.Urls, (i, s) => Path.GetFileName(s), _directory.FullName))
             {
-                _updatePage(current);
-                progressBarTotal.Value = current++;
-                if (current > _issue.Urls.Count)
+
+                downloader.DownloadProgressChanged = (o, ee) => progressBarCurrent.Value = ee.ProgressPercentage;
+                downloader.OnDownloadDataCompleted = (o, ee) =>
                 {
-                    notify("Download completed: " + _issue.Book + ", " + _issue.Issue);
-                    buttonMore.Show();
-                    buttonMore.Focus();
-                }
-            };
+                    _updatePage(current);
+                    progressBarTotal.Value = current++;
+                    if (current > _issue.Urls.Count)
+                    {
+                        Notify("Download completed: " + _issue.Book + ", " + _issue.Issue);
+                        buttonMore.Show();
+                        buttonMore.Focus();
+                    }
+                };
+                downloader.DownloadAll();
+            }
 
-
-            downloader.DownloadAll(_directory.FullName);
         }
 
         private void _updatePage(int current)
@@ -93,12 +95,13 @@ namespace jurnalu_downloader
         }
 
         private void buttonMore_Click(object sender, EventArgs e)
-        {
-            _hasMore = true;
-            MainForm.Instance.Show();
-            MainForm.Instance.Reset();
-            
+        { 
             Close();
         }
-    }
-}
+
+        private void linkLabelAbout_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+        {
+            System.Diagnostics.Process.Start("http://github.com/sayon/jurnalu-downloader");
+        } 
+        }
+    } 

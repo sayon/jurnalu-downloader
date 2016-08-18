@@ -52,6 +52,7 @@
             this.linkLabelAbout.TabIndex = 1;
             this.linkLabelAbout.TabStop = true;
             this.linkLabelAbout.Text = "See project page on GitHub";
+            this.linkLabelAbout.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.linkLabelAbout_LinkClicked);
             // 
             // textBoxInput
             // 
