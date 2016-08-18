@@ -26,7 +26,7 @@ with urllib.request.urlopen( first_page_url ) as first_page_response:
     if m0 and m1 and m2:
         highdir, lowdir = m0.groups()
         base, sidx, ext = m1.groups()
-        idx = int(sidx)
+        idx = 1 # int(sidx)
         maxidx, = map(int, m2.groups())
         print("Base url: %s\nStart index: %d\nEnd index: %d\n" % ( base, idx, maxidx))
         newpath = highdir + "/" + lowdir
